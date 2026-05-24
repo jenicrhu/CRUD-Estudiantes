@@ -1,4 +1,5 @@
 <?php
+// Vinculamos el archivo de conexión antes de ejecutar cualquier lógica
 require_once 'config/database.php';
 
 try {
@@ -18,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion'])) {
     $carrera = trim($_POST['carrera'] ?? '');
     $id = isset($_POST['id']) ? (int)$_POST['id'] : null;
 
-    // [PROPUESTO 2] Validaciones en el backend
+    // Validaciones en el backend
     if (strlen($nombre) < 3 || strlen($nombre) > 100) {
         $errores[] = "El nombre debe tener entre 3 y 100 caracteres.";
     }
@@ -39,7 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion'])) {
             ]);
             header('Location: index.php?status=created'); exit;
         } elseif ($_POST['accion'] === 'actualizar' && $id) {
-            // [PROPUESTO 1] Función UPDATE con Prepared Statements
             $stmt = $pdo->prepare("UPDATE estudiantes SET nombre = :n, email = :e, carrera = :c WHERE id = :id");
             $stmt->execute([
                 ':n' => htmlspecialchars($nombre),
@@ -72,10 +72,10 @@ if (isset($_GET['status'])) {
     if ($_GET['status'] === 'deleted') $mensaje_exito = "¡Estudiante eliminado!";
 }
 
-// [PROPUESTO 4] Búsqueda con ILIKE
+// Búsqueda con ILIKE
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 
-// [PROPUESTO 3] Paginación de 5 en 5
+// Paginación de 5 en 5
 $limit = 5;
 $pagina = isset($_GET['p']) ? (int)$_GET['p'] : 1;
 if ($pagina < 1) $pagina = 1;
@@ -113,16 +113,19 @@ $total_paginas = ceil($total_resultados / $limit);
     <meta charset="UTF-8">
     <title>Gestión de Estudiantes</title>
     <style>
-        body { font-family: Arial; margin: 40px; background: #fafafa; }
-        .box { background: white; padding: 20px; border: 1px solid #ddd; max-width: 800px; }
-        .error { color: red; background: #fee; padding: 10px; margin-bottom: 10px; }
-        .ok { color: green; background: #efe; padding: 10px; margin-bottom: 10px; }
+        body { font-family: Arial, sans-serif; margin: 40px; background: #fafafa; }
+        .box { background: white; padding: 20px; border: 1px solid #ddd; max-width: 800px; margin: 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .error { color: red; background: #fee; padding: 10px; margin-bottom: 10px; border: 1px solid #fcc; }
+        .ok { color: green; background: #efe; padding: 10px; margin-bottom: 10px; border: 1px solid #cfc; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
         th { background: #f0f0f0; }
         .nav { margin-top: 15px; }
         .nav a { padding: 5px 10px; border: 1px solid #ccc; text-decoration: none; margin: 2px; color: #333; }
-        .nav .act { background: #007bff; color: white; }
+        .nav .act { background: #007bff; color: white; border-color: #007bff; }
+        form input { padding: 6px; margin-right: 5px; }
+        form button { padding: 6px 12px; background: #28a745; color: white; border: none; cursor: pointer; }
+        form button:hover { background: #218838; }
     </style>
 </head>
 <body>
@@ -142,14 +145,14 @@ $total_paginas = ceil($total_resultados / $limit);
         <input name="email" type="email" placeholder="Email" required value="<?= $estudiante_editar ? htmlspecialchars($estudiante_editar['email']) : '' ?>">
         <input name="carrera" placeholder="Carrera" required value="<?= $estudiante_editar ? htmlspecialchars($estudiante_editar['carrera']) : '' ?>">
         <button type="submit">Guardar</button>
-        <?php if($estudiante_editar): ?> <a href="index.php">Cancelar</a> <?php endif; ?>
+        <?php if($estudiante_editar): ?> <a href="index.php" style="margin-left:10px; color:#666;">Cancelar</a> <?php endif; ?>
     </form>
 
-    <hr style="margin:20px 0;">
+    <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
 
     <form method="GET" action="index.php">
         <input name="search" placeholder="Buscar por nombre o carrera..." value="<?= htmlspecialchars($search) ?>">
-        <button type="submit">Buscar</button>
+        <button type="submit" style="background:#6c757d;">Buscar</button>
     </form>
 
     <p>Total resultados: <strong><?= $total_resultados ?></strong></p>
@@ -159,18 +162,22 @@ $total_paginas = ceil($total_resultados / $limit);
             <tr><th>ID</th><th>Nombre</th><th>Email</th><th>Carrera</th><th>Acciones</th></tr>
         </thead>
         <tbody>
-            <?php foreach ($estudiantes as $e): ?>
-            <tr>
-                <td><?= $e['id'] ?></td>
-                <td><?= htmlspecialchars($e['nombre']) ?></td>
-                <td><?= htmlspecialchars($e['email']) ?></td>
-                <td><?= htmlspecialchars($e['carrera']) ?></td>
-                <td>
-                    <a href="?edit=<?= $e['id'] ?>">Editar</a> | 
-                    <a href="?delete=<?= $e['id'] ?>" onclick="return confirm('¿Seguro?')">Eliminar</a>
-                </td>
-            </tr>
-            <?php endforeach; ?>
+            <?php if(empty($estudiantes)): ?>
+                <tr><td colspan="5" style="text-align:center; color:#999;">No se encontraron estudiantes registrados.</td></tr>
+            <?php else: ?>
+                <?php foreach ($estudiantes as $e): ?>
+                <tr>
+                    <td><?= $e['id'] ?></td>
+                    <td><?= htmlspecialchars($e['nombre']) ?></td>
+                    <td><?= htmlspecialchars($e['email']) ?></td>
+                    <td><?= htmlspecialchars($e['carrera']) ?></td>
+                    <td>
+                        <a href="?edit=<?= $e['id'] ?>" style="color:#007bff; text-decoration:none;">Editar</a> | 
+                        <a href="?delete=<?= $e['id'] ?>" style="color:#dc3545; text-decoration:none;" onclick="return confirm('¿Seguro que deseas eliminar a este estudiante?')">Eliminar</a>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </tbody>
     </table>
 
