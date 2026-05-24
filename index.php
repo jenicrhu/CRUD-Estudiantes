@@ -1,7 +1,23 @@
 <?php
-// Vinculamos el archivo de conexión antes de ejecutar cualquier lógica
-require_once 'config/database.php';
+// 1. CONFIGURACIÓN DE CONEXIÓN DIRECTA (Sin depender de otros archivos)
+function getDBConnection() {
+    $host = 'aws-1-us-west-2.pooler.supabase.com';
+    $port = '6543';
+    $dbname = 'postgres';
+    $user = 'postgres.ldtlmfqtuqwiqbhvjqmh';
+    $password = 'Sciedadquimica1234_';
 
+    try {
+        $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;user=$user;password=$password";
+        $pdo = new PDO($dsn);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        return $pdo;
+    } catch (PDOException $e) {
+        die("Error de conexión a la base de datos: " . $e->getMessage());
+    }
+}
+
+// 2. INICIALIZACIÓN
 try {
     $pdo = getDBConnection();
 } catch (PDOException $e) {
@@ -12,14 +28,13 @@ $errores = [];
 $mensaje_exito = "";
 $estudiante_editar = null;
 
-// 1. ACCIÓN: REGISTRAR O ACTUALIZAR
+// 3. ACCIÓN: REGISTRAR O ACTUALIZAR
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion'])) {
     $nombre = trim($_POST['nombre'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $carrera = trim($_POST['carrera'] ?? '');
     $id = isset($_POST['id']) ? (int)$_POST['id'] : null;
 
-    // Validaciones en el backend
     if (strlen($nombre) < 3 || strlen($nombre) > 100) {
         $errores[] = "El nombre debe tener entre 3 y 100 caracteres.";
     }
@@ -52,14 +67,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion'])) {
     }
 }
 
-// 2. ACCIÓN: BORRAR
+// 4. ACCIÓN: BORRAR
 if (isset($_GET['delete'])) {
     $stmt = $pdo->prepare("DELETE FROM estudiantes WHERE id = :id");
     $stmt->execute([':id' => (int)$_GET['delete']]);
     header('Location: index.php?status=deleted'); exit;
 }
 
-// 3. ACCIÓN: CARGAR PARA EDITAR
+// 5. ACCIÓN: CARGAR PARA EDITAR
 if (isset($_GET['edit'])) {
     $stmt = $pdo->prepare("SELECT * FROM estudiantes WHERE id = :id");
     $stmt->execute([':id' => (int)$_GET['edit']]);
@@ -72,10 +87,8 @@ if (isset($_GET['status'])) {
     if ($_GET['status'] === 'deleted') $mensaje_exito = "¡Estudiante eliminado!";
 }
 
-// Búsqueda con ILIKE
+// 6. BÚSQUEDA Y PAGINACIÓN
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
-
-// Paginación de 5 en 5
 $limit = 5;
 $pagina = isset($_GET['p']) ? (int)$_GET['p'] : 1;
 if ($pagina < 1) $pagina = 1;
