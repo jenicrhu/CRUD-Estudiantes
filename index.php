@@ -1,5 +1,5 @@
 <?php
-// 1. CONFIGURACIÓN DE CONEXIÓN DIRECTA (Sin depender de otros archivos)
+// 1. CONFIGURACIÓN DE CONEXIÓN DIRECTA
 function getDBConnection() {
     $host = 'aws-1-us-west-2.pooler.supabase.com';
     $port = '6543';
@@ -87,7 +87,7 @@ if (isset($_GET['status'])) {
     if ($_GET['status'] === 'deleted') $mensaje_exito = "¡Estudiante eliminado!";
 }
 
-// 6. BÚSQUEDA Y PAGINACIÓN
+// 6. BÚSQUEDA Y PAGINACIÓN (Corregido: ordenado por id para evitar errores de columnas inexistentes)
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $limit = 5;
 $pagina = isset($_GET['p']) ? (int)$_GET['p'] : 1;
@@ -100,16 +100,16 @@ if (!empty($search)) {
     $stmt_count->execute([':s' => "%{$search}%"]);
     $total_resultados = $stmt_count->fetchColumn();
 
-    $sql_data  = "SELECT * FROM estudiantes WHERE nombre ILIKE :s OR carrera ILIKE :s ORDER BY creado_en DESC LIMIT :limit OFFSET :offset";
+    $sql_data  = "SELECT * FROM estudiantes WHERE nombre ILIKE :s OR carrera ILIKE :s ORDER BY id DESC LIMIT :limit OFFSET :offset";
     $stmt_data = $pdo->prepare($sql_data);
     $stmt_data->bindValue(':s', "%{$search}%", PDO::PARAM_STR);
-    $stmt_data->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt_data->bindValue(':limit', $limit, $PDO::PARAM_INT);
     $stmt_data->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt_data->execute();
     $estudiantes = $stmt_data->fetchAll();
 } else {
     $total_resultados = $pdo->query("SELECT COUNT(*) FROM estudiantes")->fetchColumn();
-    $sql_data = "SELECT * FROM estudiantes ORDER BY creado_en DESC LIMIT :limit OFFSET :offset";
+    $sql_data = "SELECT * FROM estudiantes ORDER BY id DESC LIMIT :limit OFFSET :offset";
     $stmt_data = $pdo->prepare($sql_data);
     $stmt_data->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt_data->bindValue(':offset', $offset, PDO::PARAM_INT);
